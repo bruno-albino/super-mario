@@ -1,4 +1,5 @@
 require 'Util'
+require 'Player'
 
 Map = Class{}
 
@@ -33,6 +34,8 @@ function Map:init()
   self.mapWidth = 30
   self.mapHeight = 28
   self.tiles = {}
+
+  self.player = Player(self)
 
   -- camera offsets
   self.camX = 0
@@ -136,16 +139,9 @@ function Map:init()
 end
 
 function Map:update(dt)
-  
-  if love.keyboard.isDown('w') then
-    self.camY = math.max(0, self.camY + -SCROLL_SPEED * dt)
-  elseif love.keyboard.isDown('a') then
-    self.camX = math.max(0, self.camX + -SCROLL_SPEED * dt)
-  elseif love.keyboard.isDown('s') then
-    self.camY = math.min(self.mapHeightPixels - VIRTUAL_HEIGHT, self.camY + SCROLL_SPEED * dt)
-  elseif love.keyboard.isDown('d') then
-    self.camX = math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.camX + SCROLL_SPEED * dt)
-  end
+  self.camX = math.max(0, math.min(self.player.x - VIRTUAL_WIDTH / 2, math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x) ))
+
+  self.player:update(dt)
 end
 
 function Map:setTile(x, y, tile)
@@ -168,4 +164,6 @@ function Map:render()
       end
     end
   end
+
+  self.player:render()
 end

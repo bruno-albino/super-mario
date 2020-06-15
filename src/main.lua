@@ -23,11 +23,30 @@ function love.load()
     resizable = false,
     vsync = true
   })
+
+  love.keyboard.keysPressed = {}
 end
+
+function love.keypressed(key)
+  if key == 'escape' then
+
+    love.event.quit()
+  end
+
+  love.keyboard.keysPressed[key] = true
+end
+
+function love.keyboard.wasPressed(key)
+  return love.keyboard.keysPressed[key]
+end
+
+
 
 function love.update(dt) 
 
   map:update(dt)
+
+  love.keyboard.keysPressed = {}
 
 end
 
