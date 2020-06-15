@@ -11,6 +11,9 @@ require 'Util'
 require 'Map'
 
 function love.load()
+
+  math.randomseed(os.time())
+
   map = Map()
 
   love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -36,6 +39,8 @@ function love.draw()
   love.graphics.clear(108 / 255, 140 / 255, 255 / 255, 255 / 255)
   
   love.graphics.print('Hello, world')
+  
   map:render()
+
   push:apply('end')
 end
