@@ -27,6 +27,14 @@ MUSHROOM_BOTTOM = 11
 JUMP_BLOCK = 5
 JUMP_BLOCK_HIT = 9
 
+-- flagpole 
+FLAG_POLE_TOP = 8
+FLAG_POLE_CENTER = 12
+FLAG_POLE_BOTTOM = 16
+
+FLAG = 13
+FLAG_BOUNCED = 14
+
 -- a speed to multiply delta time to scroll map; smooth value
 local SCROLL_SPEED = 62
 
@@ -35,6 +43,7 @@ function Map:init()
 
     self.spritesheet = love.graphics.newImage('graphics/spritesheet.png')
     self.sprites = generateQuads(self.spritesheet, 16, 16)
+    self.music = love.audio.newSource('sounds/music.wav', 'static')
 
     self.tileWidth = 16
     self.tileHeight = 16
@@ -67,11 +76,12 @@ function Map:init()
 
     -- begin generating the terrain using vertical scan lines
     local x = 1
-    while x < self.mapWidth do
-        
+    while x < self.mapWidth - 20 do
+    
+
         -- 2% chance to generate a cloud
         -- make sure we're 2 tiles from edge at least
-        if x < self.mapWidth - 2 then
+        if x < self.mapWidth - 5  then
             if math.random(20) == 1 then
                 
                 -- choose a random vertical spot above where blocks/pipes generate
@@ -83,7 +93,7 @@ function Map:init()
         end
 
         -- 5% chance to generate a mushroom
-        if math.random(20) == 1 then
+        if math.random(20) == 1 and x < self.mapWidth - 5 then
             -- left side of pipe
             self:setTile(x, self.mapHeight / 2 - 2, MUSHROOM_TOP)
             self:setTile(x, self.mapHeight / 2 - 1, MUSHROOM_BOTTOM)
@@ -97,7 +107,7 @@ function Map:init()
             x = x + 1
 
         -- 10% chance to generate bush, being sure to generate away from edge
-        elseif math.random(10) == 1 and x < self.mapWidth - 3 then
+        elseif math.random(10) == 1 and x < self.mapWidth - 5 then
             local bushLevel = self.mapHeight / 2 - 1
 
             -- place bush component and then column of bricks
@@ -113,8 +123,21 @@ function Map:init()
             end
             x = x + 1
 
+        -- % change to generate a piramid
+        -- elseif math.random(10) == 1 and x < self.mapWidth - 2 then
+
+        --     -- TODO
+
+
+        --     -- creates column of tiles going to bottom of map
+        --     for y = self.mapHeight / 2, self.mapHeight do
+        --         self:setTile(x, y, TILE_BRICK)
+        --     end
+
+
+
         -- 10% chance to not generate anything, creating a gap
-        elseif math.random(10) ~= 1 then
+        elseif math.random(10) ~= 1 and x < self.mapWidth - 5 then
             
             -- creates column of tiles going to bottom of map
             for y = self.mapHeight / 2, self.mapHeight do
@@ -128,11 +151,42 @@ function Map:init()
 
             -- next vertical scan line
             x = x + 1
+
+
         else
             -- increment X so we skip two scanlines, creating a 2-tile gap
             x = x + 2
         end
     end
+
+    -- create bricks on the right edge to create the flagpole
+    x = self.mapWidth - 20
+    while x < self.mapWidth do
+        -- creates column of tiles going to bottom of map
+        for y = self.mapHeight / 2, self.mapHeight do
+            self:setTile(x, y, TILE_BRICK)
+        end
+
+        x = x + 1
+    end
+
+    -- CREATE A FLAGPOLE
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 7, FLAG_POLE_TOP)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 6, FLAG_POLE_CENTER)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 5, FLAG_POLE_CENTER)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 4, FLAG_POLE_CENTER)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 3, FLAG_POLE_CENTER)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 2, FLAG_POLE_CENTER)
+    self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 1, FLAG_POLE_BOTTOM)
+
+    -- CREATE A FLAG
+    self:setTile(self.mapWidth - 2, self.mapHeight / 2 - 7, FLAG)
+
+
+    -- start the background music
+    self.music:setLooping(true)
+    self.music:setVolume(0.25)
+    self.music:play()
 end
 
 -- return whether a given tile is collidable
@@ -140,7 +194,8 @@ function Map:collides(tile)
     -- define our collidable tiles
     local collidables = {
         TILE_BRICK, JUMP_BLOCK, JUMP_BLOCK_HIT,
-        MUSHROOM_TOP, MUSHROOM_BOTTOM
+        MUSHROOM_TOP, MUSHROOM_BOTTOM,
+        FLAG_POLE_BOTTOM, FLAG_POLE_CENTER, FLAG_POLE_TOP
     }
 
     -- iterate and return true if our tile type matches
@@ -161,6 +216,12 @@ function Map:update(dt)
     -- scrolling past 0 to the left and the map's width
     self.camX = math.max(0, math.min(self.player.x - VIRTUAL_WIDTH / 2,
         math.min(self.mapWidthPixels - VIRTUAL_WIDTH, self.player.x)))
+
+    -- if self:getTile(self.mapWidth, self.mapHeight / 2 - 3) == FLAG then
+    --     self:setTile(self.mapWidth, self.mapHeight / 2 - 3, FLAG_BOUNCED)
+    -- else
+    --     self:setTile(self.mapWidth, self.mapHeight / 2 - 3, FLAG)
+    -- end
 end
 
 -- gets the tile type at a given pixel coordinate
@@ -187,7 +248,13 @@ function Map:render()
     for y = 1, self.mapHeight do
         for x = 1, self.mapWidth do
             local tile = self:getTile(x, y)
-            if tile ~= TILE_EMPTY then
+
+            if tile == FLAG then
+                love.graphics.draw(self.spritesheet, self.sprites[tile], x * self.tileWidth, (y - 1) * self.tileHeight, 0, -1, 1)
+            
+            elseif tile == FLAG_POLE_TOP or tile == FLAG_POLE_CENTER or tile == FLAG_POLE_BOTTOM then
+                love.graphics.draw(self.spritesheet, self.sprites[tile], x * self.tileWidth, (y - 1) * self.tileHeight, 0, -1, 1, -5, 0)
+            elseif tile ~= TILE_EMPTY then
                 love.graphics.draw(self.spritesheet, self.sprites[tile],
                     (x - 1) * self.tileWidth, (y - 1) * self.tileHeight)
             end

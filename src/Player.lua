@@ -6,8 +6,8 @@ Player = Class{}
 
 require 'Animation'
 
-local WALKING_SPEED = 140
-local JUMP_VELOCITY = 400
+local WALKING_SPEED = 100
+local JUMP_VELOCITY = 350
 
 function Player:init(map)
     
@@ -23,6 +23,13 @@ function Player:init(map)
     -- reference to map for checking tiles
     self.map = map
     self.texture = love.graphics.newImage('graphics/blue_alien.png')
+
+    -- sound effects
+    self.sounds = {
+        ['jump'] = love.audio.newSource('sounds/jump.wav', 'static'),
+        ['hit'] = love.audio.newSource('sounds/hit.wav', 'static'),
+        ['coin'] = love.audio.newSource('sounds/coin.wav', 'static'),
+    }
 
     -- animation frames
     self.frames = {}
@@ -83,6 +90,7 @@ function Player:init(map)
                 self.dy = -JUMP_VELOCITY
                 self.state = 'jumping'
                 self.animation = self.animations['jumping']
+                self.sounds['jump']:play()
             elseif love.keyboard.isDown('a') then
                 self.direction = 'left'
                 self.dx = -WALKING_SPEED
@@ -107,6 +115,7 @@ function Player:init(map)
                 self.dy = -JUMP_VELOCITY
                 self.state = 'jumping'
                 self.animation = self.animations['jumping']
+                self.sounds['jump']:play()
             elseif love.keyboard.isDown('a') then
                 self.direction = 'left'
                 self.dx = -WALKING_SPEED
@@ -144,6 +153,8 @@ function Player:init(map)
             elseif love.keyboard.isDown('d') then
                 self.direction = 'right'
                 self.dx = WALKING_SPEED
+            else
+                self.dx = 0
             end
 
             -- apply map's gravity before y velocity
@@ -175,8 +186,19 @@ function Player:update(dt)
 
     self:calculateJumps()
 
+    self:checkIfReachedTheFlag()
+
     -- apply velocity
     self.y = self.y + self.dy * dt
+end
+
+function Player:checkIfReachedTheFlag()
+
+    if self.map:collides(self.map:tileAt(self.x + self.width - 1, self.y) or
+        self.map:collides(self.map:tileAt(self.x + self.width - 1, self.y + self.height - 1))) then
+        
+        self.sounds['coin']:play()
+    end
 end
 
 -- jumping and block hitting logic
@@ -206,6 +228,12 @@ function Player:calculateJumps()
                 playCoin = true
             else
                 playHit = true
+            end
+
+            if playCoin then
+                self.sounds['coin']:play()
+            elseif playHit then
+                self.sounds['hit']:play()
             end
 
         end
