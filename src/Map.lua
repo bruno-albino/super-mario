@@ -76,7 +76,7 @@ function Map:init()
 
     -- begin generating the terrain using vertical scan lines
     local x = 1
-    while x < self.mapWidth - 20 do
+    while x < self.mapWidth - 15  do
     
 
         -- 2% chance to generate a cloud
@@ -123,19 +123,6 @@ function Map:init()
             end
             x = x + 1
 
-        -- % change to generate a piramid
-        -- elseif math.random(10) == 1 and x < self.mapWidth - 2 then
-
-        --     -- TODO
-
-
-        --     -- creates column of tiles going to bottom of map
-        --     for y = self.mapHeight / 2, self.mapHeight do
-        --         self:setTile(x, y, TILE_BRICK)
-        --     end
-
-
-
         -- 10% chance to not generate anything, creating a gap
         elseif math.random(10) ~= 1 and x < self.mapWidth - 5 then
             
@@ -170,6 +157,9 @@ function Map:init()
         x = x + 1
     end
 
+    -- GENERATE PIRAMID
+    self:generatePiramid(5, 0)
+
     -- CREATE A FLAGPOLE
     self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 7, FLAG_POLE_TOP)
     self:setTile(self.mapWidth - 1, self.mapHeight / 2 - 6, FLAG_POLE_CENTER)
@@ -189,12 +179,42 @@ function Map:init()
     self.music:play()
 end
 
+function Map:generatePiramid(height, p)
+
+    if(height == 0) then 
+        return height
+    end
+
+    for y = self.mapHeight / 2 - height, self.mapHeight do
+        -- self:setTile(self.mapWidth - height - 10, y, TILE_BRICK)
+        self:setTile(self.mapWidth - p - 7, y , TILE_BRICK)
+    end
+
+    return self:generatePiramid(height - 1, p + 1)
+end
+
 -- return whether a given tile is collidable
 function Map:collides(tile)
     -- define our collidable tiles
     local collidables = {
         TILE_BRICK, JUMP_BLOCK, JUMP_BLOCK_HIT,
         MUSHROOM_TOP, MUSHROOM_BOTTOM,
+        FLAG_POLE_BOTTOM, FLAG_POLE_CENTER, FLAG_POLE_TOP
+    }
+
+    -- iterate and return true if our tile type matches
+    for _, v in ipairs(collidables) do
+        if tile.id == v then
+            return true
+        end
+    end
+
+    return false
+end
+
+function Map:flagCollides(tile)
+    -- define our collidable flagtiles
+    local collidables = {
         FLAG_POLE_BOTTOM, FLAG_POLE_CENTER, FLAG_POLE_TOP
     }
 

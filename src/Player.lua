@@ -74,6 +74,12 @@ function Player:init(map)
             frames = {
                 love.graphics.newQuad(32, 0, 16, 20, self.texture:getDimensions())
             }
+        }),
+        ['crouch'] = Animation({
+            texture = self.texture,
+            frames = {
+                love.graphics.newQuad(64, 0, 16, 20, self.texture:getDimensions())
+            }
         })
     }
 
@@ -83,6 +89,10 @@ function Player:init(map)
 
     -- behavior map we can call based on player state
     self.behaviors = {
+        ['winner'] = function(dt)
+            self.map.music:stop()
+            self.map:init()
+        end,
         ['idle'] = function(dt)
             
             -- add spacebar functionality to trigger jump state
@@ -103,6 +113,11 @@ function Player:init(map)
                 self.state = 'walking'
                 self.animations['walking']:restart()
                 self.animation = self.animations['walking']
+            elseif love.keyboard.isDown('s') then
+                self.dx = 0
+                self.state = 'crouch'
+                self.animations['crouch']:restart()
+                self.animation = self.animations['crouch']
             else
                 self.dx = 0
             end
@@ -122,6 +137,11 @@ function Player:init(map)
             elseif love.keyboard.isDown('d') then
                 self.direction = 'right'
                 self.dx = WALKING_SPEED
+            elseif love.keyboard.isDown('s') then
+                self.dx = 0
+                self.state = 'crouch'
+                self.animations['crouch']:restart()
+                self.animation = self.animations['crouch']
             else
                 self.dx = 0
                 self.state = 'idle'
@@ -174,6 +194,37 @@ function Player:init(map)
             -- check for collisions moving left and right
             self:checkRightCollision()
             self:checkLeftCollision()
+        end,
+        ['crouch'] = function(dt)
+            -- keep track of input to switch movement while walking, or reset
+            -- to idle if we're not moving
+            if love.keyboard.wasPressed('space') then
+                self.dy = -JUMP_VELOCITY
+                self.state = 'jumping'
+                self.animation = self.animations['jumping']
+                self.sounds['jump']:play()
+            elseif love.keyboard.isDown('a') then
+                self.state = 'walking'
+                self.animations['walking']:restart()
+                self.animation = self.animations['walking']
+                self.direction = 'left'
+                self.dx = -WALKING_SPEED
+            elseif love.keyboard.isDown('d') then
+                self.state = 'walking'
+                self.animations['walking']:restart()
+                self.animation = self.animations['walking']
+                self.direction = 'right'
+                self.dx = WALKING_SPEED
+            elseif love.keyboard.isDown('s') then
+                self.dx = 0
+                self.state = 'crouch'
+                self.animations['crouch']:restart()
+                self.animation = self.animations['crouch']
+            else
+                self.dx = 0
+                self.state = 'idle'
+                self.animation = self.animations['idle']
+            end
         end
     }
 end
@@ -182,6 +233,7 @@ function Player:update(dt)
     self.behaviors[self.state](dt)
     self.animation:update(dt)
     self.currentFrame = self.animation:getCurrentFrame()
+
     self.x = self.x + self.dx * dt
 
     self:calculateJumps()
@@ -194,10 +246,11 @@ end
 
 function Player:checkIfReachedTheFlag()
 
-    if self.map:collides(self.map:tileAt(self.x + self.width - 1, self.y) or
-        self.map:collides(self.map:tileAt(self.x + self.width - 1, self.y + self.height - 1))) then
-        
+    if self.map:flagCollides(self.map:tileAt(self.x + self.width - 1, self.y)) or
+        self.map:flagCollides(self.map:tileAt(self.x + self.width - 1, self.y + self.height - 1)) then
+
         self.sounds['coin']:play()
+        self.state = 'winner'
     end
 end
 
